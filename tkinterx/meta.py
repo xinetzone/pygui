@@ -2,15 +2,15 @@ from tkinter import Toplevel, ttk, Tk
 from tkinter import filedialog, StringVar, messagebox
 
 
-def askokcancel(window):
-    if messagebox.askokcancel('Do You need to exit?'):
+def askokcancel(window, title='Do You need to exit?', message=None):
+    if messagebox.askokcancel(title, message):
         window.destroy()
     else:
         window.deiconify()
 
 
-def showwarning(window):
-    if messagebox.showwarning(title='Warning', message='Please check your input'):
+def showwarning(window, title='Warning', message='Please check your input'):
+    if messagebox.showwarning(title, message):
         window.deiconify()
 
 
