@@ -91,4 +91,4 @@ if __name__ == "__main__":
 
 Interface presentation:
 
-![Figure 1: record your personal information](https://github.com/xinetzone/pygui/images/name_age.png)
+![Figure 1: record your personal information](images/name_age.png)
