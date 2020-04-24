@@ -2,10 +2,31 @@ from tkinter import Toplevel, ttk, Tk
 from tkinter import filedialog, StringVar, messagebox
 
 
+def askokcancel(window):
+    if messagebox.askokcancel('Do You need to exit?'):
+        window.destroy()
+    else:
+        window.deiconify()
+
+
+def showwarning(window):
+    if messagebox.showwarning(title='Warning', message='Please check your input'):
+        window.deiconify()
+
+
+def ask_window(tk_root, window_type):
+    '''Pass information through a window
+    :param tk_root: An instance of a Tk or an instance of its subclass
+    :param window_type: WindowMeta or its subclasses
+    '''
+    window = window_type(tk_root)
+    window.transient(tk_root)
+    tk_root.wait_window(window)
+    return window.bunch
+
+
 class Bunch(dict):
     def __init__(self, master, *args, **kw):
-        '''依据 key 绑定 tkinter 的组件的 textvariable
-        '''
         super().__init__(*args, **kw)
         self.__dict__ = self
         self.master = master
@@ -27,7 +48,7 @@ class WindowMeta(Toplevel):
         super().__init__(master, cnf, **kw)
         self.bunch = Bunch(self)
         self.widgets = []
-        self.ok_button = ttk.Button(self, text='确认', command=self.run)
+        self.ok_button = ttk.Button(self, text='OK', command=self.run)
         self.layout()
 
     def add_row(self, text, key):
@@ -58,29 +79,3 @@ class WindowMeta(Toplevel):
 
     def create_widget(self):
         NotImplemented
-
-
-class Root(Tk):
-    def __init__(self):
-        super().__init__()
-        style = ttk.Style()
-        style.configure("C.TButton",
-                        foreground="green",
-                        background="white",
-                        relief='raise',
-                        justify='center',
-                        font=('YaHei', '15', 'bold'))
-        self.meta_button = ttk.Button(self, text='meta',
-                                      command=self.ask_meta,
-                                      style="C.TButton")
-
-    def ask(self, window_type):
-        window = window_type(self)
-        window.transient(self)
-        self.wait_window(window)
-
-    def ask_meta(self):
-        self.ask(WindowMeta)
-
-    def layout(self):
-        self.meta_button.place(x=20, y=20)
