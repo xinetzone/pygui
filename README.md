@@ -92,3 +92,5 @@ if __name__ == "__main__":
 Interface presentation:
 
 ![Figure 1: record your personal information](images/name_age.png)
+
+For more information: [Chinese Manual](https://www.jianshu.com/nb/45403586).

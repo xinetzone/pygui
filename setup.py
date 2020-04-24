@@ -5,7 +5,7 @@ with open("README.md", "r", encoding='utf-8') as fh:
 
 setuptools.setup(
     name="tkinterx",  # Replace with your own username
-    version="0.0.3",
+    version="0.0.4",
     author="Xinwei Liu",
     author_email="735613050@qq.com",
     description="Use tkinter to create a handy GUI tool.",
