@@ -63,27 +63,79 @@ class CanvasMeta(Canvas):
         return graph_id
 
 
+class GraphMeta(dict):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+
+    def __set__(self, instance, value):
+        print('===> set', instance, value)
+        self[instance] = value
+
+    def __get__(self, instance, owner):
+        return self[instance]
+
+
+class SimpleGraph(CanvasMeta):
+    color = GraphMeta()
+    shape = GraphMeta()
+
+    def __init__(self, master, shape, color, cnf={}, **kw):
+        '''The base class of all graphics frames.
+
+        :param master: a widget of tkinter or tkinter.ttk.
+        '''
+        super().__init__(master, cnf, **kw)
+        self.color = color
+        self.shape = shape
+
+    def draw(self, direction, width=1, tags=None, **kw):
+        return self.draw_graph(self.shape, direction, color=self.color, width=width, tags=tags, **kw)
+
+    def add_row(self, direction, num, stride=10, width=1, tags=None, **kw):
+        x0, y0, x1, y1 = direction
+        stride = x1 - x0 + stride
+        for k in range(num):
+            direction = [x0+stride*k, y0, x1+stride*k, y1]
+            self.draw(direction, width=width, tags=tags, **kw)
+
+    def add_column(self, direction, num, stride=5, width=1, tags=None, **kw):
+        x0, y0, x1, y1 = direction
+        stride = y1 - y0 + stride
+        for k in range(num):
+            direction = [x0, y0+stride*k, x1, y1+stride*k]
+            self.draw(direction, width=width, tags=tags, **kw)
+
+
 class Drawing(CanvasMeta):
     '''Create graphic elements (graph) including rectangular boxes (which can be square points), 
         ovals (circular points), and segments.
         Press the left mouse button to start painting, release the left 
             mouse button for the end of the painting.
+    Example
+    ===============
+    from tkinterx.graph.canvas_design import SelectorFrame
+    from tkinterx.graph.canvas import Drawing
+    from tkinter import Tk
+    root = Tk()
+    selector_frame = SelectorFrame(root, 'rectangle', 'yellow')
+    self = Drawing(root, selector_frame, width=800, height=800, background='lightgray')
+    self.layout(0, 0)
+    selector_frame.layout(0, 1)
+    root.columnconfigure(0, weight=1)
+    root.rowconfigure(0, weight=1)
+    root.mainloop()
     '''
 
-    def __init__(self, master=None, selector=None, cnf={}, **kw):
+    def __init__(self, master, selector_frame, cnf={}, **kw):
         '''Click the left mouse button to start painting, release
             the left mouse button to complete the painting.
 
         :param selector: The graphics selector, which is an instance of Selector.
         '''
         super().__init__(master, cnf, **kw)
-        self.selector = selector
+        self.selector_frame = selector_frame
         self._init_params()
         self._draw_bind()
-
-    def _draw_bind(self):
-        self.bind("<1>", self.update_xy)
-        self.bind("<ButtonRelease-1>", self.draw)
 
     def _init_params(self):
         self.x = self.y = 0
@@ -100,7 +152,7 @@ class Drawing(CanvasMeta):
         bbox = x0, y0, x1, y1
         return bbox
 
-    def draw(self, event):
+    def mouse_draw(self, event):
         '''Release the left mouse button to finish painting.'''
         self.configure(cursor="arrow")
         bbox = self.get_bbox(event)
@@ -111,21 +163,25 @@ class Drawing(CanvasMeta):
 
         :param bbox: (x0,y0,x1,y1)
         '''
+        color, shape = self.selector_frame._selector.color, self.selector_frame._selector.shape
         x0, y0, x1, y1 = bbox
-        cond1 = x0 == x1 and y0 == y1 and 'point' not in self.selector.graph_type
-        cond2 = 'point' in self.selector.graph_type and (x0 != x1 or y0 != y1)
+        cond1 = x0 == x1 and y0 == y1 and 'point' not in shape
+        cond2 = 'point' in shape and (x0 != x1 or y0 != y1)
         kw = {
             'direction': bbox,
-            'color': self.selector.color,
-            'tags': self.selector.graph_type
+            'color': color,
+            'tags': shape
         }
         if cond1 or cond2:
             return
         else:
-            return self.draw_graph(self.selector.graph_type.split('_')[0], **kw)
+            return self.draw_graph(shape.split('_')[0], **kw)
+
+    def _draw_bind(self):
+        self.bind("<1>", self.update_xy)
+        self.bind("<ButtonRelease-1>", self.mouse_draw)
 
     def layout(self, row=0, column=0):
-        '''The internal layout.'''
         self.grid(row=row, column=column, sticky='nwes')
 
 
@@ -134,16 +190,28 @@ class TrajectoryDrawing(Drawing):
 
     Click the left mouse button to start painting, move the 
         left mouse button 'after_time' after the completion of painting.
+
+    Example
+    ===================
+    root = Tk()
+    selector = SelectorFrame(root)
+    meta = TrajectoryDrawing(root, selector, after_time=370, background='lightgray')
+    # Makes the master widget change as the canvas size
+    root.columnconfigure(0, weight=1)
+    root.rowconfigure(0, weight=1)
+    meta.layout(0, 0)
+    selector.layout(0, 1)
+    root.mainloop()
     '''
 
-    def __init__(self, master,  selector, after_time=1000, cnf={}, **kw):
+    def __init__(self, master,  selector, after_time=200, cnf={}, **kw):
         super().__init__(master, selector, cnf, **kw)
         self.after_time = after_time
         self.bind("<1>", self.update_xy)
         self.bind("<ButtonRelease-1>", self.update_xy)
-        self.bind("<Button1-Motion>", self.draw)
+        self.bind("<Button1-Motion>", self.mouse_draw)
 
-    def draw(self, event):
+    def mouse_draw(self, event):
         '''Release the left mouse button to finish painting.'''
         self.configure(cursor="arrow")
         self.after(self.after_time)

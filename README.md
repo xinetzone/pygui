@@ -21,10 +21,6 @@ import tkinterx
 ## A sample: Record your personal information
 
 ```python
-from tkinter import Tk, ttk, StringVar
-from tkinterx.meta import WindowMeta, showwarning, askokcancel, ask_window
-
-
 class Window(WindowMeta):
     def __init__(self, master=None, cnf={}, **kw):
         super().__init__(master, cnf, **kw)
@@ -34,19 +30,20 @@ class Window(WindowMeta):
         self.add_row('Please enter your age:', 'age')
         self.add_row('Enter your information saving path:', 'save_path')
 
-    def save(self, path, text):
+    def save(self, path):
+        table = self.table.todict()
         with open(path, 'w') as fp:
-            fp.write(text)
+            json.dump(table, fp)
 
     def run(self):
         self.withdraw()
-        name = self.bunch['name'].get()
-        age = self.bunch['age'].get()
-        save_path = self.bunch['save_path'].get()
+        name = self.table['name']
+        age = self.table['age']
+        save_path = str(self.table['save_path'])
         if '' in [name, age, save_path]:
             showwarning(self)
         else:
-            self.save(save_path, f"{name}: {age}")
+            self.save(save_path)
             askokcancel(self)
 
 
@@ -75,7 +72,7 @@ class Root(Tk):
 
     def ask_table(self):
         bunch = ask_window(self, Window)
-        name, age = bunch['name'].get(), bunch['age'].get()
+        name, age = bunch['name'], bunch['age']
         self.label_var.set(f"{name}: {age}")
 
     def layout(self):
