@@ -47,9 +47,9 @@ class CanvasMeta(Canvas):
         '''
         if tags is None:
             if graph_type in ('rectangle', 'oval', 'line', 'arc'):
-                tags = f"graph {graph_type}"
+                tags = f"{color} {graph_type}"
             else:
-                tags = 'graph'
+                tags = f'{color} graph'
 
         com_kw = {'width': width, 'tags': tags}
         kw = {**com_kw, 'outline': color}
@@ -170,7 +170,7 @@ class Drawing(CanvasMeta):
         kw = {
             'direction': bbox,
             'color': color,
-            'tags': shape
+            'tags': (color, shape)
         }
         if cond1 or cond2:
             return

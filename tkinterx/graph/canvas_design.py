@@ -137,6 +137,7 @@ class SelectorFrame(ttk.Frame):
 
     def layout(self, row=0, column=1):
         '''The layout's internal widget.'''
-        self._selector.grid(row=0, column=0, sticky='we')
-        self.info_entry.grid(row=1, column=0)
         self.grid(row=row, column=column, sticky='nwes')
+        self._selector.grid(row=0, column=0, sticky='we')
+        self.info_entry.grid(row=1, column=0, sticky='we')
+        
