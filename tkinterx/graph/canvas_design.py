@@ -1,4 +1,4 @@
-from tkinter import ttk, StringVar
+from tkinter import ttk, StringVar, colorchooser
 import json
 
 from .canvas import SimpleGraph
@@ -15,7 +15,7 @@ class SelectorMeta(SimpleGraph):
     select.grid()
     root.mainloop()
     '''
-    colors = 'red', 'blue', 'black', 'purple', 'green',  'yellow', 'white', 'orange' # 'skyblue'
+    colors = 'red', 'blue', 'black', 'purple', 'green',  'yellow', 'white', 'orange'  # 'skyblue'
     shapes = 'rectangle', 'oval', 'line', 'oval_point', 'rectangle_point'
 
     def __init__(self, master, shape, color, cnf={}, **kw):
@@ -25,8 +25,25 @@ class SelectorMeta(SimpleGraph):
         '''
         super().__init__(master, shape, color, cnf, **kw)
         self.start, self.end = 15, 50
+        self.info_var = StringVar()
+        self.update_info()
+        ttk.Style(self).configure("BW.TButton", foreround="purple", font='Times 10')
+        self.custom_color_button = ttk.Button(self, text='Custom', style="BW.TButton", command=self.custom_color)
         self.create_color()
         self.create_shape()
+
+    def update_info(self, *args):
+        '''Update info information.'''
+        text = f"{self.color} {self.shape}"
+        self.info_var.set(text)
+
+    def custom_color(self, *args):
+        # Pop-up color selection dialog box
+        select_color = colorchooser.askcolor(parent=self.master,
+                                             title="Please choose a color", color=self.color)
+        if select_color:
+            self.color = select_color[1]
+        self.update_info()
 
     def create_color(self):
         '''Set the color selector'''
@@ -38,6 +55,7 @@ class SelectorMeta(SimpleGraph):
             t = 7+30*(k+1)
             direction = x0+t, y0, x1+t, y1
             self.draw(direction, width=2, tags=tags, fill=color)
+        self.create_window((x0+30*(k+2)+2, y0+10), window=self.custom_color_button, anchor='w')
 
     def create_shape(self):
         '''Set the shape selector'''
@@ -63,19 +81,12 @@ class Selector(SelectorMeta):
         '''
         super().__init__(master, shape, color, cnf, **kw)
         self.bind_selector()
-        self.info_var = StringVar()
-        self.update_info()
 
     def bind_selector(self):
         [self.color_bind(self, color)
          for color in SelectorMeta.colors]
         [self.shape_bind(self, shape)
          for shape in SelectorMeta.shapes]
-
-    def update_info(self, *args):
-        '''Update info information.'''
-        text = f"{self.color} {self.shape}"
-        self.info_var.set(text)
 
     def update_color(self, new_color):
         self.color = new_color
@@ -84,7 +95,6 @@ class Selector(SelectorMeta):
     def update_shape(self, new_shape):
         '''Update graph_type information.'''
         self.shape = new_shape
-        text = f"You Selected: {self.color},{self.shape}"
         self.update_info()
 
     def color_bind(self, canvas, color):
@@ -140,4 +150,3 @@ class SelectorFrame(ttk.Frame):
         self.grid(row=row, column=column, sticky='nwes')
         self._selector.grid(row=0, column=0, sticky='we')
         self.info_entry.grid(row=1, column=0, sticky='we')
-        
