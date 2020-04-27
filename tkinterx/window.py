@@ -33,6 +33,7 @@ class DrawingWindow(Tk):
         self.bind('<Left>', lambda event: self.move_graph(event, -1, 0))
         self.bind('<Right>', lambda event: self.move_graph(event, 1, 0))
         self.bind('<F1>', self.clear_graph)
+        self.bind('<F2>', self.fill_normal)
         self.bind('<Delete>', self.delete_graph)
 
     def find_closest(self):
@@ -100,6 +101,11 @@ class DrawingWindow(Tk):
         self.clear_graph()
         for param in params.values():
             self.drawing.draw_graph(**param)
+
+    def fill_normal(self, *args):
+        graph_id = self.find_closest()
+        color = self.drawing.selector_frame._selector.color
+        self.drawing.itemconfigure(graph_id, fill=color)
 
     def layout(self, row=0):
         self.columnconfigure(0, weight=1)

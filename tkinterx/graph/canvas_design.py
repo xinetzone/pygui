@@ -15,7 +15,7 @@ class SelectorMeta(SimpleGraph):
     select.grid()
     root.mainloop()
     '''
-    colors = 'red', 'blue', 'black', 'purple', 'green',  'yellow', 'white', 'orange'  # 'skyblue'
+    colors = 'red', 'blue', 'black', 'purple', 'green', 'orange'  # 'skyblue'
     shapes = 'rectangle', 'oval', 'line', 'oval_point', 'rectangle_point'
 
     def __init__(self, master, shape, color, cnf={}, **kw):
@@ -27,8 +27,10 @@ class SelectorMeta(SimpleGraph):
         self.start, self.end = 15, 50
         self.info_var = StringVar()
         self.update_info()
-        ttk.Style(self).configure("BW.TButton", foreround="purple", font='Times 10')
-        self.custom_color_button = ttk.Button(self, text='Custom', style="BW.TButton", command=self.custom_color)
+        ttk.Style(self).configure("BW.TButton",
+                                  foreround="purple", font='Times 10')
+        self.custom_color_button = ttk.Button(
+            self, text='Custom', style="BW.TButton", command=self.custom_color)
         self.create_color()
         self.create_shape()
 
@@ -55,7 +57,8 @@ class SelectorMeta(SimpleGraph):
             t = 7+30*(k+1)
             direction = x0+t, y0, x1+t, y1
             self.draw(direction, width=2, tags=tags, fill=color)
-        self.create_window((x0+30*(k+2)+2, y0+10), window=self.custom_color_button, anchor='w')
+        self.create_window((x0+30*(k+2)+14, y0+10),
+                           window=self.custom_color_button, anchor='w')
 
     def create_shape(self):
         '''Set the shape selector'''
