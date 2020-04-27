@@ -7,7 +7,7 @@ def save_bunch(bunch, path):
         json.dump(bunch, fp)
 
 
-def load_bunch(self, path):
+def load_bunch(path):
     with open(path) as fp:
         bunch = json.load(fp)
     return bunch

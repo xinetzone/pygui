@@ -12,32 +12,18 @@ class DrawingWindow(Tk):
         self._selected_tags = set()
         self.selector_frame = SelectorFrame(self, 'rectangle', 'blue')
         self.drawing = Drawing(self, self.selector_frame,
-                               width=800, height=800, background='lightgray')
+                               width=800, height=600, background='lightgray')
         self.create_notebook()
         self.tip_var = StringVar(self)
         self.tip_label = ttk.Label(self, textvariable=self.tip_var,
                             foreground='blue', background='yellow')
         self.tip_var.set("Start your creation!")
-        self.bind('<1>', self.update_info)
+        self.bind('<Motion>', self.update_info)
         self.bind_move()
 
-    @property
-    def selected_tags(self):
-        return self._selected_tags
-
-    @selected_tags.setter
-    def selected_tags(self, tags):
-        if tags == 'current':
-            self._selected_tags = self.find_withtag(tags)
-        else:
-            self._selected_tags = tags
-
-    def select_graph(self, event, tags):
-        self.configure(cursor="target")
-        self.update_xy(event)
-        self.selected_tags = tags
-
     def update_info(self, *args):
+        if not self.drawing.on:
+            self.drawing.update_xy(*args)
         xy = self.drawing.x, self.drawing.y
         self.tip_var.set(xy)
 

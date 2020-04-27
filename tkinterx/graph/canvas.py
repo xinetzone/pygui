@@ -126,7 +126,7 @@ class Drawing(CanvasMeta):
     root.mainloop()
     '''
 
-    def __init__(self, master, selector_frame, cnf={}, **kw):
+    def __init__(self, master, selector_frame, after_time=160, cnf={}, **kw):
         '''Click the left mouse button to start painting, release
             the left mouse button to complete the painting.
 
@@ -134,30 +134,52 @@ class Drawing(CanvasMeta):
         '''
         super().__init__(master, cnf, **kw)
         self.selector_frame = selector_frame
-        self._init_params()
+        self.after_time = after_time
+        self.x = self.y = 0
+        self.reset()
         self._draw_bind()
 
-    def _init_params(self):
-        self.x = self.y = 0
+    def reset(self):
+        self.first_x, self.first_y = 0, 0
+        self.last_x, self.last_y = 0, 0
+        self.on = False # Used to record whether a painting is being made
 
     def update_xy(self, event):
         '''Press the left mouse button to record the coordinates of the left mouse button'''
         self.x = self.canvasx(event.x)
         self.y = self.canvasy(event.y)
 
-    def get_bbox(self, event):
+    def update_bbox(self, event):
         x0, y0 = self.x, self.y  # The upper-left coordinates of the graph
         self.update_xy(event)
         x1, y1 = self.x, self.y  # Lower-right coordinates of the graph
         bbox = x0, y0, x1, y1
         return bbox
 
+    def get_bbox(self, event):
+        self.update_xy(event)
+        return self.first_x, self.first_y, self.x, self.y
+
+    def strat_draw(self, event):
+        self.update_xy(event)
+        self.first_x, self.first_y = self.x, self.y
+
     def mouse_draw(self, event):
         '''Release the left mouse button to finish painting.'''
         self.configure(cursor="arrow")
+        self.after(self.after_time)
         bbox = self.get_bbox(event)
-        return self.create_graph(bbox)
+        self.create_graph(bbox)
 
+    def mouse_move(self, event):
+        self.on = True
+        self.mouse_draw(event)
+
+    def mouse_release(self, event):
+        self.delete('temp')
+        self.on = False
+        self.mouse_draw(event)
+        
     def create_graph(self, bbox):
         '''Create a graphic.
 
@@ -167,10 +189,14 @@ class Drawing(CanvasMeta):
         x0, y0, x1, y1 = bbox
         cond1 = x0 == x1 and y0 == y1 and 'point' not in shape
         cond2 = 'point' in shape and (x0 != x1 or y0 != y1)
+        if self.on:
+            tags = (color, shape, 'temp')
+        else:
+            tags = (color, shape)
         kw = {
             'direction': bbox,
             'color': color,
-            'tags': (color, shape)
+            'tags': tags
         }
         if cond1 or cond2:
             return
@@ -183,15 +209,17 @@ class Drawing(CanvasMeta):
         x0, y0, x1, y1 = self.get_bbox(event)
         graph_id = self.find_closest(x0, y0)
         bbox = self.bbox(graph_id)
-        return self.coords(graph_id, *bbox[:2], x1, y1)
+        self.coords(graph_id, *bbox[:2], x1, y1)
 
     def get_xy(self, event):
         self.configure(cursor="target")
         self.update_xy(event)
 
     def _draw_bind(self):
-        self.bind("<1>", self.update_xy)
-        self.bind("<ButtonRelease-1>", self.mouse_draw)
+        self.bind("<1>", self.strat_draw)
+        self.bind("<B1-Motion>",  self.mouse_move)
+        self.bind("<ButtonRelease-1>", self.mouse_release)
+        self.bind("<B3-Motion>", self.get_xy)
         self.bind("<3>", self.get_xy)
         self.bind("<ButtonRelease-3>", self.tune_graph)
 

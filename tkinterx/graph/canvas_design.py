@@ -15,7 +15,7 @@ class SelectorMeta(SimpleGraph):
     select.grid()
     root.mainloop()
     '''
-    colors = 'red', 'blue', 'black', 'purple', 'green', 'skyblue', 'yellow', 'white', 'orange', 'pink'
+    colors = 'red', 'blue', 'black', 'purple', 'green',  'yellow', 'white', 'orange' # 'skyblue'
     shapes = 'rectangle', 'oval', 'line', 'oval_point', 'rectangle_point'
 
     def __init__(self, master, shape, color, cnf={}, **kw):
