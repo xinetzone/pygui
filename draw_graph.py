@@ -1,4 +1,3 @@
-from tkinter import ttk
 from tkinterx.window import DrawingWindow
 
 
