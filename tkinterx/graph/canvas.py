@@ -1,6 +1,6 @@
 '''Some of the actions related to the graph.
 '''
-from tkinter import Canvas
+from tkinter import Canvas, StringVar
 
 
 class CanvasMeta(Canvas):
@@ -177,9 +177,23 @@ class Drawing(CanvasMeta):
         else:
             return self.draw_graph(shape.split('_')[0], **kw)
 
+    def tune_graph(self, event):
+        '''Release the left mouse button to finish painting.'''
+        self.configure(cursor="arrow")
+        x0, y0, x1, y1 = self.get_bbox(event)
+        graph_id = self.find_closest(x0, y0)
+        bbox = self.bbox(graph_id)
+        return self.coords(graph_id, *bbox[:2], x1, y1)
+
+    def get_xy(self, event):
+        self.configure(cursor="target")
+        self.update_xy(event)
+
     def _draw_bind(self):
         self.bind("<1>", self.update_xy)
         self.bind("<ButtonRelease-1>", self.mouse_draw)
+        self.bind("<3>", self.get_xy)
+        self.bind("<ButtonRelease-3>", self.tune_graph)
 
     def layout(self, row=0, column=0):
         self.grid(row=row, column=column, sticky='nwes')
