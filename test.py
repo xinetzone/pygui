@@ -1,87 +1,39 @@
-from tkinter import ttk, Tk, StringVar, filedialog
-from PIL import Image, ImageTk
-from pathlib import Path
+from tkinter import Tk, ttk, StringVar, filedialog, Canvas
 
-from .graph.canvas_design import SelectorFrame
-from .graph.canvas import Drawing, CanvasMeta
-from .utils import save_bunch, load_bunch, mkdir, Frame
-from .image_utils import ImageLoader
+from tkinterx.utils import Frame, save_bunch, load_bunch, mkdir
+from tkinterx.image_utils import ImageLoader
 
 
 class DrawingWindow(Tk):
     def __init__(self, screenName=None, baseName=None, className='Tk', useTk=1, sync=0, use=None):
         super().__init__(screenName, baseName, className, useTk, sync, use)
         self.reset()
-        self.selector_frame = SelectorFrame(self, 'rectangle', 'blue')
-        self.drawing = Drawing(self, self.selector_frame,
-                               width=800, height=600, background='lightgray')
-        self.create_notebook()
+        self.drawing = Canvas(self, width=800, height=600,
+                              background='lightgray')
         self.tip_var = StringVar(self)
         self.tip_label = ttk.Label(self, textvariable=self.tip_var,
                                    foreground='blue', background='yellow')
         self.tip_var.set("Start your creation!")
-        self.bind('<Motion>', self.update_info)
-        self.bind_move()
+        #self.bind('<Motion>', self.update_info)
+        self.create_notebook()
 
     def reset(self):
         self.bunch = {}
         self.image_names = ()
         self._image_loader = None
 
-    def update_info(self, *args):
-        if not self.drawing.on:
-            self.drawing.update_xy(*args)
-        xy = self.drawing.x, self.drawing.y
-        self.tip_var.set(xy)
-
-    def bind_move(self):
-        self.bind('<Up>', lambda event: self.move_graph(event, 0, -1))
-        self.bind('<Down>', lambda event: self.move_graph(event, 0, 1))
-        self.bind('<Left>', lambda event: self.move_graph(event, -1, 0))
-        self.bind('<Right>', lambda event: self.move_graph(event, 1, 0))
-        self.bind('<F1>', self.clear_graph)
-        self.bind('<F2>', self.fill_normal)
-        self.bind('<Delete>', self.delete_graph)
-
-    def find_closest(self):
-        xy = self.drawing.x, self.drawing.y
-        graph_id = self.drawing.find_closest(*xy)
-        return graph_id
-
-    def find_closest_not_image(self):
-        graph_id = self.drawing.find_above('image')
-
-    def delete_graph(self, *args):
-        graph_id = self.find_closest()
-        self.drawing.delete(graph_id)
-
-    def clear_graph(self, *args):
-        self.drawing.delete('all')
-
-    def move_graph(self, event, x, y):
-        graph_id = self.find_closest()
-        self.drawing.move(graph_id, x, y)
+    
 
     def create_notebook(self):
         self.notebook = ttk.Notebook(
-            self.selector_frame, width=200, height=200, padding=(5, 5, 5, 5))
-        # first page, which would get widgets gridded into it
-        self.normal = ttk.Frame(self.notebook, width=200,
-                                height=200, padding=(5, 5, 5, 5))
-        self.save_normal_button = ttk.Button(
-            self.normal, text='Save', command=lambda: self.save_graph('all'))
-        self.load_normal_button = ttk.Button(
-            self.normal, text='Load', command=self.load_normal)
-        self.annotation = ttk.Frame(
-            self.notebook, width=200, height=200, padding=(5, 5, 5, 5))
+            self, width=200, height=200, padding=(5, 5, 5, 5))
         self.image_frame = Frame(
-            self.annotation, text='images', padding=(5, 5, 5, 5))
+            self.notebook, text='images', padding=(5, 5, 5, 5))
         self.next_image_button = ttk.Button(self.image_frame, text='Next')
         self.prev_image_button = ttk.Button(self.image_frame, text='Prev')
         self.annotation_frame = Frame(
-            self.annotation, text='annotations', padding=(5, 5, 5, 5))
-        self.notebook.add(self.annotation, text='Annotation')
-        self.notebook.add(self.normal, text='Normal')
+            self.notebook, text='annotations', padding=(5, 5, 5, 5))
+        self.notebook.add(self.image_frame, text='Annotation')
         self.init_command()
 
     def init_command(self):
@@ -184,13 +136,16 @@ class DrawingWindow(Tk):
     def layout(self, row=0):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
-        self.drawing.layout(row=row, column=0)
-        self.selector_frame.layout(row=row, column=1)
-        self.tip_label.grid(row=row+1, sticky='we')
-        self.notebook.grid(row=row+2, column=0)
-        self.save_normal_button.grid(row=0, column=0, padx=2, pady=2)
-        self.load_normal_button.grid(row=0, column=1, padx=2, pady=2)
-        self.image_frame.grid(row=0, column=0, padx=2, pady=2)
+        self.drawing.grid(row=row, column=0)
+        self.tip_label.grid(row=row+1, column=0, sticky='we')
+        self.notebook.grid(row=row, column=1)
+        self.annotation_frame.grid(row=row, column=1, padx=2, pady=2)
+        self.image_frame.grid(row=row+1, column=1, padx=2, pady=2)
         self.prev_image_button.grid(row=1, column=0, padx=2, pady=2)
         self.next_image_button.grid(row=1, column=1, padx=2, pady=2)
-        self.annotation_frame.grid(row=1, column=0, padx=2, pady=2)
+
+
+if __name__ == "__main__":
+    root = DrawingWindow()
+    root.layout()
+    root.mainloop()

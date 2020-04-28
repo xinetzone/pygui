@@ -1,6 +1,47 @@
 '''Some of the actions related to the graph.
 '''
-from tkinter import Canvas, StringVar
+from tkinter import Canvas, StringVar, ttk
+
+
+class ScrollableCanvas(Canvas):
+    def __init__(self, master=None, cnf={}, **kw):
+        '''The base class of all graphics frames.
+
+        :param master: a widget of tkinter or tkinter.ttk.
+
+        Example
+        ======================
+        root = Tk()
+        root.geometry('800x600')
+        self = ScrollableCanvas(root, width=300, height=400)
+        self.create_rectangle([20, 20, 1000, 1000], fill='red')
+        self.layout()
+        root.mainloop()
+        '''
+        super().__init__(master, cnf, **kw)
+        self._set_scroll()
+        self._scroll_command()
+        self.configure(xscrollcommand=self.scroll_x.set,
+                       yscrollcommand=self.scroll_y.set)
+        self.bind("<Configure>", self.resize)
+        #self.update_idletasks()
+
+    def _set_scroll(self):
+        self.scroll_x = ttk.Scrollbar(self, orient='horizontal')
+        self.scroll_y = ttk.Scrollbar(self, orient='vertical')
+
+    def _scroll_command(self):
+        self.scroll_x['command'] = self.xview
+        self.scroll_y['command'] = self.yview
+
+    def resize(self, event):
+        region = self.bbox('all')
+        self.configure(scrollregion=region)
+
+    def layout(self):
+        self.scroll_x.pack(side='top', fill='x')
+        self.pack(side='left', expand='yes', fill='both')
+        self.scroll_y.pack(side='right', fill='y')
 
 
 class CanvasMeta(Canvas):
@@ -142,7 +183,7 @@ class Drawing(CanvasMeta):
     def reset(self):
         self.first_x, self.first_y = 0, 0
         self.last_x, self.last_y = 0, 0
-        self.on = False # Used to record whether a painting is being made
+        self.on = False  # Used to record whether a painting is being made
 
     def update_xy(self, event):
         '''Press the left mouse button to record the coordinates of the left mouse button'''
@@ -179,7 +220,7 @@ class Drawing(CanvasMeta):
         self.delete('temp')
         self.on = False
         self.mouse_draw(event)
-        
+
     def create_graph(self, bbox):
         '''Create a graphic.
 
@@ -261,3 +302,4 @@ class TrajectoryDrawing(Drawing):
         self.after(self.after_time)
         bbox = self.get_bbox(event)
         return self.create_graph(bbox)
+

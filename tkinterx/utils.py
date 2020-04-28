@@ -29,5 +29,5 @@ class Frame(ttk.LabelFrame):
         self.layout(row=0)
         
     def layout(self, row=0):
-        self.save_button.grid(row=row, column=0)
-        self.load_button.grid(row=row, column=1)
+        self.load_button.grid(row=row, column=0)
+        self.save_button.grid(row=row, column=1)
