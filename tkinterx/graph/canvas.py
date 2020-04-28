@@ -198,6 +198,8 @@ class Drawing(CanvasMeta):
             'color': color,
             'tags': tags
         }
+        if self.on:
+            kw.update({"dash": 7})
         if cond1 or cond2:
             return
         else:
