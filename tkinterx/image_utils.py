@@ -84,5 +84,7 @@ class ImageLoader:
 
     def create_image(self, canvas, x, y, **kw):
         self.update_image()
-        canvas.create_image(
-            x, y, image=self._current_image, tags='image', **kw)
+        canvas.create_image(x, y, image=self._current_image, tags='image', **kw)
+
+    def __len__(self):
+        return len(self.names)

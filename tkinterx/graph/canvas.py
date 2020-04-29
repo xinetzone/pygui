@@ -3,47 +3,6 @@
 from tkinter import Canvas, StringVar, ttk
 
 
-class ScrollableCanvas(Canvas):
-    def __init__(self, master=None, cnf={}, **kw):
-        '''The base class of all graphics frames.
-
-        :param master: a widget of tkinter or tkinter.ttk.
-
-        Example
-        ======================
-        root = Tk()
-        root.geometry('800x600')
-        self = ScrollableCanvas(root, width=300, height=400)
-        self.create_rectangle([20, 20, 1000, 1000], fill='red')
-        self.layout()
-        root.mainloop()
-        '''
-        super().__init__(master, cnf, **kw)
-        self._set_scroll()
-        self._scroll_command()
-        self.configure(xscrollcommand=self.scroll_x.set,
-                       yscrollcommand=self.scroll_y.set)
-        self.bind("<Configure>", self.resize)
-        #self.update_idletasks()
-
-    def _set_scroll(self):
-        self.scroll_x = ttk.Scrollbar(self, orient='horizontal')
-        self.scroll_y = ttk.Scrollbar(self, orient='vertical')
-
-    def _scroll_command(self):
-        self.scroll_x['command'] = self.xview
-        self.scroll_y['command'] = self.yview
-
-    def resize(self, event):
-        region = self.bbox('all')
-        self.configure(scrollregion=region)
-
-    def layout(self):
-        self.scroll_x.pack(side='top', fill='x')
-        self.pack(side='left', expand='yes', fill='both')
-        self.scroll_y.pack(side='right', fill='y')
-
-
 class CanvasMeta(Canvas):
     '''Graphic elements are composed of line(segment), rectangle, ellipse, and arc.
     '''
@@ -270,36 +229,35 @@ class Drawing(CanvasMeta):
         self.grid(row=row, column=column, sticky='nwes')
 
 
-class TrajectoryDrawing(Drawing):
-    '''Draw based on the mouse's trajectory.
+# class TrajectoryDrawing(Drawing):
+#     '''Draw based on the mouse's trajectory.
 
-    Click the left mouse button to start painting, move the 
-        left mouse button 'after_time' after the completion of painting.
+#     Click the left mouse button to start painting, move the 
+#         left mouse button 'after_time' after the completion of painting.
 
-    Example
-    ===================
-    root = Tk()
-    selector = SelectorFrame(root)
-    meta = TrajectoryDrawing(root, selector, after_time=370, background='lightgray')
-    # Makes the master widget change as the canvas size
-    root.columnconfigure(0, weight=1)
-    root.rowconfigure(0, weight=1)
-    meta.layout(0, 0)
-    selector.layout(0, 1)
-    root.mainloop()
-    '''
+#     Example
+#     ===================
+#     root = Tk()
+#     selector = SelectorFrame(root)
+#     meta = TrajectoryDrawing(root, selector, after_time=370, background='lightgray')
+#     # Makes the master widget change as the canvas size
+#     root.columnconfigure(0, weight=1)
+#     root.rowconfigure(0, weight=1)
+#     meta.layout(0, 0)
+#     selector.layout(0, 1)
+#     root.mainloop()
+#     '''
 
-    def __init__(self, master,  selector, after_time=200, cnf={}, **kw):
-        super().__init__(master, selector, cnf, **kw)
-        self.after_time = after_time
-        self.bind("<1>", self.update_xy)
-        self.bind("<ButtonRelease-1>", self.update_xy)
-        self.bind("<Button1-Motion>", self.mouse_draw)
+#     def __init__(self, master,  selector, after_time=200, cnf={}, **kw):
+#         super().__init__(master, selector, cnf, **kw)
+#         self.after_time = after_time
+#         self.bind("<1>", self.update_xy)
+#         self.bind("<ButtonRelease-1>", self.update_xy)
+#         self.bind("<Button1-Motion>", self.mouse_draw)
 
-    def mouse_draw(self, event):
-        '''Release the left mouse button to finish painting.'''
-        self.configure(cursor="arrow")
-        self.after(self.after_time)
-        bbox = self.get_bbox(event)
-        return self.create_graph(bbox)
-
+#     def mouse_draw(self, event):
+#         '''Release the left mouse button to finish painting.'''
+#         self.configure(cursor="arrow")
+#         self.after(self.after_time)
+#         bbox = self.get_bbox(event)
+#         return self.create_graph(bbox)

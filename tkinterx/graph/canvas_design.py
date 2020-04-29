@@ -130,14 +130,14 @@ class SelectorFrame(ttk.Frame):
         '''
         super().__init__(master, **kw)
         self._selector = Selector(
-            self, shape, color, background='lightgreen', width=360, height=80)
+            self, shape, color, background='lightgreen', width=360, height=60)
         self.create_info()
         self._selector.info_var.trace_add('write', self.update_select)
 
     def create_info(self):
         self.info_var = StringVar()
         self.update_select()
-        self.info_entry = ttk.Entry(self, textvariable=self.info_var, width=36)
+        self.info_entry = ttk.Entry(self, textvariable=self.info_var, width=25)
         self.info_entry['state'] = 'readonly'
 
     def update_select(self, *args):
@@ -153,3 +153,8 @@ class SelectorFrame(ttk.Frame):
         self.grid(row=row, column=column, sticky='nwes')
         self._selector.grid(row=0, column=0, sticky='we')
         self.info_entry.grid(row=1, column=0, sticky='we')
+
+    def layout_pack(self):
+        '''The layout's internal widget.'''
+        self._selector.pack(side='left', fill='y')
+        self.info_entry.pack(side='left', fill='y')

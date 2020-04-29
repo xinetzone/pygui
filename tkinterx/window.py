@@ -4,11 +4,11 @@ from pathlib import Path
 
 from .graph.canvas_design import SelectorFrame
 from .graph.canvas import Drawing, CanvasMeta
-from .utils import save_bunch, load_bunch, mkdir, Frame
+from .utils import save_bunch, load_bunch, mkdir, FileFrame, FileNotebook
 from .image_utils import ImageLoader
 
 
-class DrawingWindow(Tk):
+class GraphWindow(Tk):
     def __init__(self, screenName=None, baseName=None, className='Tk', useTk=1, sync=0, use=None):
         super().__init__(screenName, baseName, className, useTk, sync, use)
         self.reset()
@@ -51,6 +51,11 @@ class DrawingWindow(Tk):
     def find_closest_not_image(self):
         graph_id = self.drawing.find_above('image')
 
+    def find_closest(self):
+        xy = self.drawing.x, self.drawing.y
+        graph_id = self.drawing.find_closest(*xy)
+        return graph_id
+
     def delete_graph(self, *args):
         graph_id = self.find_closest()
         self.drawing.delete(graph_id)
@@ -74,11 +79,11 @@ class DrawingWindow(Tk):
             self.normal, text='Load', command=self.load_normal)
         self.annotation = ttk.Frame(
             self.notebook, width=200, height=200, padding=(5, 5, 5, 5))
-        self.image_frame = Frame(
+        self.image_frame = FileFrame(
             self.annotation, text='images', padding=(5, 5, 5, 5))
         self.next_image_button = ttk.Button(self.image_frame, text='Next')
         self.prev_image_button = ttk.Button(self.image_frame, text='Prev')
-        self.annotation_frame = Frame(
+        self.annotation_frame = FileFrame(
             self.annotation, text='annotations', padding=(5, 5, 5, 5))
         self.notebook.add(self.annotation, text='Annotation')
         self.notebook.add(self.normal, text='Normal')
@@ -120,10 +125,11 @@ class DrawingWindow(Tk):
         graph = self.get_graph(tags)
         mkdir('data')
         path = self.set_path(tags)
-        current_image_path = self.image_loader.current_path
-        if current_image_path:
-            self.bunch.update({self.image_loader.current_name: graph})
-            save_bunch(self.bunch, path)
+        if self.image_loader:
+            current_image_path = self.image_loader.current_path
+            if current_image_path:
+                self.bunch.update({self.image_loader.current_name: graph})
+                save_bunch(self.bunch, path)
         else:
             save_bunch(graph, path)
 
@@ -194,3 +200,195 @@ class DrawingWindow(Tk):
         self.prev_image_button.grid(row=1, column=0, padx=2, pady=2)
         self.next_image_button.grid(row=1, column=1, padx=2, pady=2)
         self.annotation_frame.grid(row=1, column=0, padx=2, pady=2)
+
+
+class ScrollableDrawing(Drawing):
+    def __init__(self, master, selector_frame, after_time=160, cnf={}, **kw):
+        super().__init__(master, selector_frame, after_time, cnf, **kw)
+        self._set_scroll()
+        self._scroll_command()
+        self.configure(xscrollcommand=self.scroll_x.set,
+                       yscrollcommand=self.scroll_y.set)
+        self.bind("<Configure>", self.resize)
+        self.update_idletasks()
+
+    def _set_scroll(self):
+        self.scroll_x = ttk.Scrollbar(self, orient='horizontal')
+        self.scroll_y = ttk.Scrollbar(self, orient='vertical')
+
+    def _scroll_command(self):
+        self.scroll_x['command'] = self.xview
+        self.scroll_y['command'] = self.yview
+
+    def resize(self, event):
+        region = self.bbox('all')
+        self.configure(scrollregion=region)
+
+    def layout(self):
+        self.selector_frame.pack(side='top', anchor='w')
+        self.selector_frame.layout_pack()
+        self.scroll_x.pack(side='top', fill='x')
+        self.pack(side='top', expand='yes', fill='both')
+        self.scroll_y.pack(side='left', fill='y')
+
+
+class GraphDrawing(ScrollableDrawing):
+    def __init__(self, master, selector_frame, after_time=160, cnf={}, **kw):
+        super().__init__(master, selector_frame, after_time, cnf, **kw)
+        self.page_var = StringVar()
+        self.jump_stride_var = StringVar()
+        self.jump_stride_var.set(1)
+        self.create_notebook()
+        self.image_loader = None
+        self.page_num = 1
+        self.info_var = StringVar()
+        self.info_label = ttk.Label(
+            self.selector_frame, textvariable=self.info_var)
+        self.master.bind('<Return>', self.update_page)
+        self.master.bind('<Control-KeyPress-s>', self.save_rectangle)
+        self.master.bind('<F1>', self.clear_graph)
+        self.bind('<Delete>', self.delete_graph)
+        self.bunch = {}
+
+    def create_notebook(self):
+        self.notebook = FileNotebook(
+            self.selector_frame, width=200, height=100, padding=(5, 5, 5, 5))
+        image_frame, image_load_button, image_save_button = self.notebook.add_frame(
+            text='Image')
+        graph_frame, graph_load_button, graph_save_button = self.notebook.add_frame(
+            text='Graph')
+        additional_frame = self.notebook.add_frame(
+            text='Additional', is_init_set=False)
+        prev_button = ttk.Button(
+            image_frame, text='Prev', command=self.prev_page)
+        next_button = ttk.Button(
+            image_frame, text='Next', command=self.next_page)
+        current_page_label = ttk.Label(image_frame, text='current page')
+        current_page_entry = ttk.Entry(
+            image_frame, width='7', textvariable=self.page_var)
+        jump_label = ttk.Label(image_frame, text='jump stride')
+        jump_entry = ttk.Entry(image_frame, width='7',
+                               textvariable=self.jump_stride_var)
+        widgets = [[prev_button, next_button], [current_page_label, current_page_entry],
+                   [jump_label, jump_entry]]
+        self.notebook.layout(widgets, start=1)
+        image_load_button['command'] = self.load_images
+        graph_save_button['command'] = lambda: self.save_graph('rectangle')
+
+    def set_image(self):
+        self.image_loader.current_id = int(self.page_var.get())
+        self.image_loader.create_image(self, 0, 0, anchor='nw')
+
+    def load_images(self, *args):
+        root = filedialog.askdirectory()
+        if root:
+            self.image_loader = ImageLoader(root)
+            self.page_num = len(self.image_loader)
+            self.page_var.set(0)
+            self.set_image()
+            self.info_var.set(f'Total Load {self.page_num} images')
+            self.bunch['root'] = root
+
+    def get_page(self):
+        return self.page_var.get(), self.jump_stride_var.get()
+
+    def update_current_page(self, current_page):
+        if isinstance(current_page, str):
+            current_page = int(current_page)
+        if -self.page_num < current_page < self.page_num:
+            self.page_var.set(current_page)
+
+    def update_page(self, *args):
+        if self.image_loader:
+            current_page, jump_stride = self.get_page()
+            if '' not in [current_page, jump_stride]:
+                self.update_current_page(current_page)
+                self.set_image()
+
+    def next_page(self, *args):
+        current_page, jump_stride = self.get_page()
+        if '' not in [current_page, jump_stride]:
+            current_page = int(current_page) + int(jump_stride)
+            self.update_current_page(current_page)
+            self.set_image()
+
+    def prev_page(self, *args):
+        current_page, jump_stride = self.get_page()
+        if '' not in [current_page, jump_stride]:
+            current_page = int(current_page) - int(jump_stride)
+            self.update_current_page(current_page)
+            self.set_image()
+
+    def get_graph(self, tags):
+        cats = {}
+        for graph_id in self.find_withtag(tags):
+            tags = self.gettags(graph_id)
+            bbox = self.bbox(graph_id)
+            cats[graph_id] = {'tags': tags, 'bbox': bbox}
+        return cats
+
+    def set_path(self, tags):
+        if tags == 'all':
+            return 'data/normal.json'
+        else:
+            return 'data/annotations.json'
+
+    def save_graph(self, tags):
+        graph = self.get_graph(tags)
+        mkdir('data')
+        path = self.set_path(tags)
+        if self.image_loader:
+            current_image_path = self.image_loader.current_path
+            if current_image_path:
+                self.bunch.update({self.image_loader.current_name: graph})
+                save_bunch(self.bunch, path)
+        else:
+            save_bunch(graph, path)
+
+    def save_rectangle(self, *args):
+        self.save_graph('rectangle')
+
+    def load_graph(self):
+        self.bunch = load_bunch('data/annotations.json')
+        root = self.bunch['root']
+        self.image_loader = ImageLoader(root)
+        self.image_names = [
+            f"{root}/{image_name}" for image_name in self.bunch if image_name != root]
+        self.image_loader.current_id = 0
+        self.create_image(root)
+        self._draw_graph(self.bunch[self.image_loader.current_name])
+
+    def bunch2params(self, bunch):
+        params = {}
+        for graph_id, cats in bunch.items():
+            tags = cats['tags']
+            color, shape = tags
+            graph_type = shape.split('_')[0]
+            bbox = cats['bbox']
+            params[graph_id] = {'tags': tags, 'color': color,
+                                'graph_type': graph_type, 'direction': bbox}
+        return params
+
+    def _draw_graph(self, cats):
+        params = self.bunch2params(cats)
+        self.clear_graph()
+        for param in params.values():
+            self.draw_graph(**param)
+
+    def clear_graph(self, *args):
+        self.delete('all')
+        
+    def delete_graph(self, *args):
+        xy = self.x, self.y
+        graph_id = self.find_closest(*xy)
+        self.delete(graph_id)
+
+    def layout(self):
+        self.selector_frame.pack(side='top', anchor='w')
+        self.notebook.pack(side='right', anchor='w')
+        self.selector_frame.info_entry.pack(side='top', anchor='w', fill='y')
+        self.selector_frame._selector.pack(side='top', anchor='w', fill='y')
+        self.info_label.pack(side='top', anchor='w', fill='y')
+        self.scroll_x.pack(side='top', fill='x')
+        self.pack(side='top', expand='yes', fill='both', anchor='w')
+        self.scroll_y.pack(side='left', anchor='w', fill='y')
