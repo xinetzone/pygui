@@ -62,204 +62,147 @@ class CanvasMeta(Canvas):
         graph_id = func(*direction, **kwargs)
         return graph_id
 
+    def _create_regular_graph(self, graph_type, center, radius, color='blue', width=1, tags=None, **kw):
+        '''Used to create a circle or square.
+        :param graph_type: 'oval', 'rectangle'
+        :param center: (x, y) The center of the regular_graph
+        :param radius: Radius of the regular_graph
+        '''
+        x, y = center
+        direction = [x-radius, y - radius, x+radius, y+radius]
+        return self.draw_graph(graph_type, direction, color, width, tags, **kw)
 
-class GraphMeta(dict):
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
+    def create_circle(self, center, radius, color='blue', width=1, tags=None, **kw):
+        '''
+        :param center: (x, y) The center of the circle
+        :param radius: Radius of the circle
+        '''
+        return self._create_regular_graph('oval', center, radius, color, width, tags, **kw)
 
-    def __set__(self, instance, value):
-        print('===> set', instance, value)
-        self[instance] = value
+    def create_square(self, center, radius, color='blue', width=1, tags=None, **kw):
+        '''
+        :param center: (x, y) The center of the square
+        :param radius: Radius of the square
+        '''
+        return self._create_regular_graph('rectangle', center, radius, color, width, tags, **kw)
 
-    def __get__(self, instance, owner):
-        return self[instance]
+    def create_circle_point(self, location, color='blue', width=1, tags=None, **kw):
+        '''
+        :param location: (x, y) The location of the circle_point
+        '''
+        return self.create_circle(location, 0, color, width, tags, **kw)
+
+    def create_square_point(self, location, color='blue', width=1, tags=None, **kw):
+        '''
+        :param location: (x, y) The location of the square_point
+        '''
+        return self.create_square(location, 0, color, width, tags, **kw)
 
 
-class SimpleGraph(CanvasMeta):
-    color = GraphMeta()
-    shape = GraphMeta()
+class GraphMeta(CanvasMeta):
+    '''Set some mouse event bindings to the keyboard.
+    '''
 
-    def __init__(self, master, shape, color, cnf={}, **kw):
+    def __init__(self, master=None, cnf={}, **kw):
         '''The base class of all graphics frames.
-
         :param master: a widget of tkinter or tkinter.ttk.
         '''
         super().__init__(master, cnf, **kw)
-        self.color = color
-        self.shape = shape
+        self._init_set()
+        self.create_info_widgets()
+        self._set_bind()
 
-    def draw(self, direction, width=1, tags=None, **kw):
-        return self.draw_graph(self.shape, direction, color=self.color, width=width, tags=tags, **kw)
+    def _init_set(self):
+        self.xy_var = StringVar()
+        self.x, self.y = 0, 0
+        self.record_bbox = ['none']*4
 
-    def add_row(self, direction, num, stride=10, width=1, tags=None, **kw):
-        x0, y0, x1, y1 = direction
-        stride = x1 - x0 + stride
-        for k in range(num):
-            direction = [x0+stride*k, y0, x1+stride*k, y1]
-            self.draw(direction, width=width, tags=tags, **kw)
-
-    def add_column(self, direction, num, stride=5, width=1, tags=None, **kw):
-        x0, y0, x1, y1 = direction
-        stride = y1 - y0 + stride
-        for k in range(num):
-            direction = [x0, y0+stride*k, x1, y1+stride*k]
-            self.draw(direction, width=width, tags=tags, **kw)
-
-
-class Drawing(CanvasMeta):
-    '''Create graphic elements (graph) including rectangular boxes (which can be square points), 
-        ovals (circular points), and segments.
-        Press the left mouse button to start painting, release the left 
-            mouse button for the end of the painting.
-    Example
-    ===============
-    from tkinterx.graph.canvas_design import SelectorFrame
-    from tkinterx.graph.canvas import Drawing
-    from tkinter import Tk
-    root = Tk()
-    selector_frame = SelectorFrame(root, 'rectangle', 'yellow')
-    self = Drawing(root, selector_frame, width=800, height=800, background='lightgray')
-    self.layout(0, 0)
-    selector_frame.layout(0, 1)
-    root.columnconfigure(0, weight=1)
-    root.rowconfigure(0, weight=1)
-    root.mainloop()
-    '''
-
-    def __init__(self, master, selector_frame, after_time=160, cnf={}, **kw):
-        '''Click the left mouse button to start painting, release
-            the left mouse button to complete the painting.
-
-        :param selector: The graphics selector, which is an instance of Selector.
-        '''
-        super().__init__(master, cnf, **kw)
-        self.selector_frame = selector_frame
-        self.after_time = after_time
-        self.x = self.y = 0
-        self.reset()
-        self._draw_bind()
-
-    def reset(self):
-        self.first_x, self.first_y = 0, 0
-        self.last_x, self.last_y = 0, 0
-        self.on = False  # Used to record whether a painting is being made
+    def create_info_widgets(self):
+        self.info_frame = ttk.Frame(self.master)
+        self.xy_label = ttk.Label(self.info_frame, textvariable=self.xy_var)
 
     def update_xy(self, event):
-        '''Press the left mouse button to record the coordinates of the left mouse button'''
         self.x = self.canvasx(event.x)
         self.y = self.canvasy(event.y)
+        self.record_bbox[2:] = self.x, self.y
+        self.xy_var.set(f"Direction Vector: {self.record_bbox}")
 
-    def update_bbox(self, event):
-        x0, y0 = self.x, self.y  # The upper-left coordinates of the graph
-        self.update_xy(event)
-        x1, y1 = self.x, self.y  # Lower-right coordinates of the graph
-        bbox = x0, y0, x1, y1
-        return bbox
+    @property
+    def closest_graph(self):
+        xy = self.record_bbox[2:]
+        if xy:
+            return self.find_closest(*xy)
 
-    def get_bbox(self, event):
-        self.update_xy(event)
-        return self.first_x, self.first_y, self.x, self.y
-
-    def strat_draw(self, event):
-        self.update_xy(event)
-        self.first_x, self.first_y = self.x, self.y
-
-    def mouse_draw(self, event):
+    def tune_graph(self, *args):
         '''Release the left mouse button to finish painting.'''
         self.configure(cursor="arrow")
-        self.after(self.after_time)
-        bbox = self.get_bbox(event)
-        self.create_graph(bbox)
-
-    def mouse_move(self, event):
-        self.on = True
-        self.mouse_draw(event)
-
-    def mouse_release(self, event):
-        self.delete('temp')
-        self.on = False
-        self.mouse_draw(event)
-
-    def create_graph(self, bbox):
-        '''Create a graphic.
-
-        :param bbox: (x0,y0,x1,y1)
-        '''
-        color, shape = self.selector_frame._selector.color, self.selector_frame._selector.shape
-        x0, y0, x1, y1 = bbox
-        cond1 = x0 == x1 and y0 == y1 and 'point' not in shape
-        cond2 = 'point' in shape and (x0 != x1 or y0 != y1)
-        if self.on:
-            tags = (color, shape, 'temp')
-        else:
-            tags = (color, shape)
-        kw = {
-            'direction': bbox,
-            'color': color,
-            'tags': tags
-        }
-        if self.on:
-            kw.update({"dash": 7})
-        if cond1 or cond2:
-            return
-        else:
-            return self.draw_graph(shape.split('_')[0], **kw)
-
-    def tune_graph(self, event):
-        '''Release the left mouse button to finish painting.'''
-        self.configure(cursor="arrow")
-        x0, y0, x1, y1 = self.get_bbox(event)
+        x1, y1 = self.record_bbox[2:]
         current_graph_id = self.find_withtag('current')
         graph_id = current_graph_id if current_graph_id else self.find_closest(
-            x0, y0)
+            x1, y1)
         bbox = self.bbox(graph_id)
-        self.coords(graph_id, *bbox[:2], x1, y1)
+        if 'none' not in bbox[:2]:
+            self.coords(graph_id, *bbox[:2], x1, y1)
 
-    def get_xy(self, event):
-        self.configure(cursor="target")
-        self.update_xy(event)
+    def select_graph(self, *args):
+        if self.closest_graph:
+            self.itemconfigure(self.closest_graph, dash=10)
 
-    def _draw_bind(self):
-        self.bind("<1>", self.strat_draw)
-        self.bind("<B1-Motion>",  self.mouse_move)
-        self.bind("<ButtonRelease-1>", self.mouse_release)
-        self.bind("<B3-Motion>", self.get_xy)
-        self.bind("<3>", self.get_xy)
-        self.bind("<ButtonRelease-3>", self.tune_graph)
+    def start_drawing(self, *args):
+        self.record_bbox[:2] = self.x, self.y
+        self.xy_var.set(f"Direction Vector: {self.record_bbox}")
 
-    def layout(self, row=0, column=0):
-        self.grid(row=row, column=column, sticky='nwes')
+    def mouse_draw_graph(self, graph_type, color='blue', width=1, tags=None, **kw):
+        return self.draw_graph(graph_type, self.record_bbox, color, width, tags, **kw)
+
+    def reset(self):
+        self.record_bbox[:2] = ['none']*2
+
+    def drawing(self,  graph_type='rectangle', color='blue', width=1, tags=None, **kw):
+        self.delete('temp')
+        if 'none' not in self.record_bbox:
+            self.mouse_draw_graph(graph_type, color, width, tags, **kw)
+
+    def finish_drawing(self, event=None, graph_type='rectangle', color='blue', width=1, tags=None, **kw):
+        self.drawing(graph_type, color, width, tags, **kw)
+        self.reset()
+
+    def refresh_rectangle(self, event=None, graph_type='rectangle', color='purple', width=2, tags='temp', **kw):
+        self.after(30, lambda: self.drawing(
+            graph_type, color, width, tags, dash=5, **kw))
+
+    def _set_bind(self):
+        self.bind('<1>', self.start_drawing)
+        self.master.bind('<Motion>', self.update_xy)
+        self.bind('<Motion>', self.refresh_rectangle)
+        self.bind('<ButtonRelease-1>', self.finish_drawing)
+        self.bind('<Double-Button-1>', self.select_graph)
+        self.bind('<ButtonRelease-3>', self.tune_graph)
+
+    def layout(self, row=1, column=0):
+        self.info_frame.grid(row=row, column=column)
+        self.xy_label.grid(row=0, column=0)
 
 
-# class TrajectoryDrawing(Drawing):
-#     '''Draw based on the mouse's trajectory.
+class GraphCanvas(GraphMeta):
+    '''Set some mouse event bindings to the keyboard.
+    '''
 
-#     Click the left mouse button to start painting, move the
-#         left mouse button 'after_time' after the completion of painting.
+    def __init__(self, master=None, cnf={}, **kw):
+        '''The base class of all graphics frames.
+        :param master: a widget of tkinter or tkinter.ttk.
+        '''
+        super().__init__(master, cnf, **kw)
 
-#     Example
-#     ===================
-#     root = Tk()
-#     selector = SelectorFrame(root)
-#     meta = TrajectoryDrawing(root, selector, after_time=370, background='lightgray')
-#     # Makes the master widget change as the canvas size
-#     root.columnconfigure(0, weight=1)
-#     root.rowconfigure(0, weight=1)
-#     meta.layout(0, 0)
-#     selector.layout(0, 1)
-#     root.mainloop()
-#     '''
+    def refresh_rectangle(self, *args):
+        self.after(30, lambda: self.draw_rectangle(
+            tags='temp', dash=5, width=2))
 
-#     def __init__(self, master,  selector, after_time=200, cnf={}, **kw):
-#         super().__init__(master, selector, cnf, **kw)
-#         self.after_time = after_time
-#         self.bind("<1>", self.update_xy)
-#         self.bind("<ButtonRelease-1>", self.update_xy)
-#         self.bind("<Button1-Motion>", self.mouse_draw)
+    def draw_rectangle(self, min_size=(10, 10), color='blue', width=1, tags=None, *args, **kw):
+        self.delete('temp')
+        if 'none' not in self.record_bbox:
+            self.mouse_draw_graph('rectangle', color, width, tags, **kw)
 
-#     def mouse_draw(self, event):
-#         '''Release the left mouse button to finish painting.'''
-#         self.configure(cursor="arrow")
-#         self.after(self.after_time)
-#         bbox = self.get_bbox(event)
-#         return self.create_graph(bbox)
+    def finish_drawing(self, *args, **kw):
+        self.draw_rectangle(*args, **kw)
+        self._init_set()
