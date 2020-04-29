@@ -209,7 +209,9 @@ class Drawing(CanvasMeta):
         '''Release the left mouse button to finish painting.'''
         self.configure(cursor="arrow")
         x0, y0, x1, y1 = self.get_bbox(event)
-        graph_id = self.find_closest(x0, y0)
+        current_graph_id = self.find_withtag('current')
+        graph_id = current_graph_id if current_graph_id else self.find_closest(
+            x0, y0)
         bbox = self.bbox(graph_id)
         self.coords(graph_id, *bbox[:2], x1, y1)
 
@@ -232,7 +234,7 @@ class Drawing(CanvasMeta):
 # class TrajectoryDrawing(Drawing):
 #     '''Draw based on the mouse's trajectory.
 
-#     Click the left mouse button to start painting, move the 
+#     Click the left mouse button to start painting, move the
 #         left mouse button 'after_time' after the completion of painting.
 
 #     Example

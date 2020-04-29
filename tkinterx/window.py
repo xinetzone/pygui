@@ -247,8 +247,16 @@ class GraphDrawing(ScrollableDrawing):
         self.master.bind('<Return>', self.update_page)
         self.master.bind('<Control-KeyPress-s>', self.save_rectangle)
         self.master.bind('<F1>', self.clear_graph)
-        self.bind('<Delete>', self.delete_graph)
+        self.master.bind('<Delete>', self.delete_graph)
+        #self.master.bind('<1>', self.show_current_graph)
+        self.master.bind('<1>', lambda event: self.select_graph(event, 'current'))
         self.bunch = {}
+        self.selected_tags = ()
+
+    def show_current_graph(self, *args):
+        graph_id = self.find_withtag('current')
+        clostest_graph_id = self.find_closest(self.x, self.y, start=2)
+        print(self.x, self.y, graph_id, clostest_graph_id)
 
     def create_notebook(self):
         self.notebook = FileNotebook(
@@ -273,7 +281,8 @@ class GraphDrawing(ScrollableDrawing):
                    [jump_label, jump_entry]]
         self.notebook.layout(widgets, start=1)
         image_load_button['command'] = self.load_images
-        graph_save_button['command'] = lambda: self.save_graph('rectangle')
+        graph_save_button['command'] = lambda: self.save_graph('all')
+        graph_load_button['command'] = self.load_graph
 
     def set_image(self):
         self.image_loader.current_id = int(self.page_var.get())
@@ -350,13 +359,22 @@ class GraphDrawing(ScrollableDrawing):
 
     def load_graph(self):
         self.bunch = load_bunch('data/annotations.json')
-        root = self.bunch['root']
-        self.image_loader = ImageLoader(root)
-        self.image_names = [
-            f"{root}/{image_name}" for image_name in self.bunch if image_name != root]
-        self.image_loader.current_id = 0
-        self.create_image(root)
-        self._draw_graph(self.bunch[self.image_loader.current_name])
+        root = self.bunch.get()
+        if root:
+            
+            self.image_loader = ImageLoader(root)
+            self.image_names = [
+                f"{root}/{image_name}" for image_name in self.bunch if image_name != root]
+            self.image_loader.current_id = 0
+            self.create_image(root)
+            self.reload_graph(self.bunch[self.image_loader.current_name])
+        else:
+            self.bunch = load_bunch('data/normal.json')
+            self.load_normal()
+
+    def load_normal(self):
+        self.bunch = load_bunch('data/normal.json')
+        self.reload_graph(self.bunch)
 
     def bunch2params(self, bunch):
         params = {}
@@ -369,7 +387,7 @@ class GraphDrawing(ScrollableDrawing):
                                 'graph_type': graph_type, 'direction': bbox}
         return params
 
-    def _draw_graph(self, cats):
+    def reload_graph(self, cats):
         params = self.bunch2params(cats)
         self.clear_graph()
         for param in params.values():
@@ -382,6 +400,15 @@ class GraphDrawing(ScrollableDrawing):
         xy = self.x, self.y
         graph_id = self.find_closest(*xy)
         self.delete(graph_id)
+
+    def select_graph(self, event, tags):
+        self.configure(cursor="target")
+        self.update_xy(event)
+        if tags == 'current':
+            self.selected_tags = self.find_withtag(tags)
+        else:
+            self.selected_tags = tags
+        print(self.selected_tags)
 
     def layout(self):
         self.selector_frame.pack(side='top', anchor='w')
