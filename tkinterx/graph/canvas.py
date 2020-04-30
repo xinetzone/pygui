@@ -19,7 +19,7 @@ class CanvasMeta(Canvas):
         # Layout canvas space
         self.grid(row=row, column=column, sticky='nwes')
 
-    def draw_graph(self, graph_type, direction, color='blue', width=1, tags=None, **kwargs):
+    def create_graph(self, graph_type, direction, color='blue', width=1, tags=None, **kwargs):
         '''Draw basic graphic elements.
 
         :param direction: Specifies the orientation of the graphic element. 
@@ -47,9 +47,9 @@ class CanvasMeta(Canvas):
         '''
         if tags is None:
             if graph_type in ('rectangle', 'oval', 'line', 'arc'):
-                tags = f"{color} {graph_type}"
+                tags = f"graph {color} {graph_type}"
             else:
-                tags = f'{color} graph'
+                tags = f'graph {color}'
 
         com_kw = {'width': width, 'tags': tags}
         kw = {**com_kw, 'outline': color}
@@ -70,7 +70,7 @@ class CanvasMeta(Canvas):
         '''
         x, y = center
         direction = [x-radius, y - radius, x+radius, y+radius]
-        return self.draw_graph(graph_type, direction, color, width, tags, **kw)
+        return self.create_graph(graph_type, direction, color, width, tags, **kw)
 
     def create_circle(self, center, radius, color='blue', width=1, tags=None, **kw):
         '''
@@ -114,46 +114,31 @@ class GraphMeta(CanvasMeta):
 
     def _init_set(self):
         self.xy_var = StringVar()
-        self.x, self.y = 0, 0
         self.record_bbox = ['none']*4
 
     def create_info_widgets(self):
         self.info_frame = ttk.Frame(self.master)
         self.xy_label = ttk.Label(self.info_frame, textvariable=self.xy_var)
 
-    def update_xy(self, event):
-        self.x = self.canvasx(event.x)
-        self.y = self.canvasy(event.y)
-        self.record_bbox[2:] = self.x, self.y
-        self.xy_var.set(f"Direction Vector: {self.record_bbox}")
+    def get_canvasxy(self, event):
+        return self.canvasx(event.x), self.canvasy(event.y)
 
     @property
-    def closest_graph(self):
+    def closest_graph_id(self):
         xy = self.record_bbox[2:]
         if xy:
             return self.find_closest(*xy)
 
-    def tune_graph(self, *args):
-        '''Release the left mouse button to finish painting.'''
-        self.configure(cursor="arrow")
-        x1, y1 = self.record_bbox[2:]
-        current_graph_id = self.find_withtag('current')
-        graph_id = current_graph_id if current_graph_id else self.find_closest(
-            x1, y1)
-        bbox = self.bbox(graph_id)
-        if 'none' not in bbox[:2]:
-            self.coords(graph_id, *bbox[:2], x1, y1)
+    def update_xy(self, event):
+        self.record_bbox[2:] = self.get_canvasxy(event)
+        self.xy_var.set(f"Direction Vector: {self.record_bbox}")
 
-    def select_graph(self, *args):
-        if self.closest_graph:
-            self.itemconfigure(self.closest_graph, dash=10)
-
-    def start_drawing(self, *args):
-        self.record_bbox[:2] = self.x, self.y
+    def start_drawing(self, event):
+        self.record_bbox[:2] = self.get_canvasxy(event)
         self.xy_var.set(f"Direction Vector: {self.record_bbox}")
 
     def mouse_draw_graph(self, graph_type, color='blue', width=1, tags=None, **kw):
-        return self.draw_graph(graph_type, self.record_bbox, color, width, tags, **kw)
+        return self.create_graph(graph_type, self.record_bbox, color, width, tags, **kw)
 
     def reset(self):
         self.record_bbox[:2] = ['none']*2
@@ -164,45 +149,26 @@ class GraphMeta(CanvasMeta):
             self.mouse_draw_graph(graph_type, color, width, tags, **kw)
 
     def finish_drawing(self, event=None, graph_type='rectangle', color='blue', width=1, tags=None, **kw):
-        self.drawing(graph_type, color, width, tags, **kw)
+        graph_id = self.drawing(graph_type, color, width, tags, **kw)
         self.reset()
 
     def refresh_rectangle(self, event=None, graph_type='rectangle', color='purple', width=2, tags='temp', **kw):
         self.after(30, lambda: self.drawing(
             graph_type, color, width, tags, dash=5, **kw))
 
+    def clear_all(self, event):
+        self.delete('all')
+
     def _set_bind(self):
         self.bind('<1>', self.start_drawing)
-        self.master.bind('<Motion>', self.update_xy)
-        self.bind('<Motion>', self.refresh_rectangle)
+        self.bind('<Motion>', self.update_xy)
+        self.master.bind('<Motion>', self.refresh_rectangle)
         self.bind('<ButtonRelease-1>', self.finish_drawing)
-        self.bind('<Double-Button-1>', self.select_graph)
-        self.bind('<ButtonRelease-3>', self.tune_graph)
+        self.master.bind('<F1>', self.clear_all)
+        self.tag_bind('graph', '<1>', )
+        #self.bind('<Double-Button-1>', self.select_graph)
+        #self.bind('<ButtonRelease-3>', self.tune_graph)
 
     def layout(self, row=1, column=0):
         self.info_frame.grid(row=row, column=column)
         self.xy_label.grid(row=0, column=0)
-
-
-class GraphCanvas(GraphMeta):
-    '''Set some mouse event bindings to the keyboard.
-    '''
-
-    def __init__(self, master=None, cnf={}, **kw):
-        '''The base class of all graphics frames.
-        :param master: a widget of tkinter or tkinter.ttk.
-        '''
-        super().__init__(master, cnf, **kw)
-
-    def refresh_rectangle(self, *args):
-        self.after(30, lambda: self.draw_rectangle(
-            tags='temp', dash=5, width=2))
-
-    def draw_rectangle(self, min_size=(10, 10), color='blue', width=1, tags=None, *args, **kw):
-        self.delete('temp')
-        if 'none' not in self.record_bbox:
-            self.mouse_draw_graph('rectangle', color, width, tags, **kw)
-
-    def finish_drawing(self, *args, **kw):
-        self.draw_rectangle(*args, **kw)
-        self._init_set()
