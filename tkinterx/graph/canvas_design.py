@@ -1,7 +1,44 @@
 from tkinter import ttk, StringVar, colorchooser
 import json
 
-from .canvas import SimpleGraph
+from tkinterx.param import ParamDict
+from tkinterx.graph.canvas import CanvasMeta
+
+
+class SimpleGraph(CanvasMeta):
+    color = ParamDict()
+    shape = ParamDict()
+
+    def __init__(self, master, shape, color, cnf={}, **kw):
+        '''The base class of all graphics frames.
+
+        :param shape: 'point', 'circle', 'square', 'rectangle',
+             'oval', 'line', 'arc'(That is, segment), 'polygon'.
+        '''
+        super().__init__(master, cnf, **kw)
+        self.color = color
+        self.shape = shape
+
+    def draw(self, direction, width=1, tags=None, **kw):
+        return self.create_graph(self.shape, direction, self.color, width, tags, **kw)
+
+    @property
+    def default_tags(self):
+        return f"graph {self.color} {self.shape}"
+
+    def add_row(self, direction, num, stride=10, width=1, tags=None, **kw):
+        x0, y0, x1, y1 = direction
+        stride = x1 - x0 + stride
+        for k in range(num):
+            direction = [x0+stride*k, y0, x1+stride*k, y1]
+            self.draw(direction, width=width, tags=tags, **kw)
+
+    def add_column(self, direction, num, stride=5, width=1, tags=None, **kw):
+        x0, y0, x1, y1 = direction
+        stride = y1 - y0 + stride
+        for k in range(num):
+            direction = [x0, y0+stride*k, x1, y1+stride*k]
+            self.draw(direction, width=width, tags=tags, **kw)
 
 
 class SelectorMeta(SimpleGraph):
@@ -56,7 +93,7 @@ class SelectorMeta(SimpleGraph):
             tags = f"color {color}"
             t = 7+30*(k+1)
             direction = x0+t, y0, x1+t, y1
-            self.draw(direction, width=2, tags=tags, fill=color)
+            self.draw_draph(direction, width=2, tags=tags, fill=color)
         self.create_window((x0+30*(k+2)+14, y0+10),
                            window=self.custom_color_button, anchor='w')
 

@@ -14,13 +14,13 @@ def test_Meta():
         'dash': 2,
         'width': 3,
     }
-    self.draw_graph('line', [20, 20, 100, 200], **kw)
-    self.draw_graph('oval', [50, 80, 100, 200], fill='red', **kw)
-    self.draw_graph('rectangle', [170, 80, 220, 200], fill='yellow', **kw)
-    self.draw_graph('arc', [180, 100, 250, 260],
+    self.create_graph('line', [20, 20, 100, 200], **kw)
+    self.create_graph('oval', [50, 80, 100, 200], fill='red', **kw)
+    self.create_graph('rectangle', [170, 80, 220, 200], fill='yellow', **kw)
+    self.create_graph('arc', [180, 100, 250, 260],
                     tags='test',
                     fill='lightblue', style='chord', **kw)
-    self.draw_graph('polygon', [(70, 80), (20, 70),
+    self.create_graph('polygon', [(70, 80), (20, 70),
                                 (30, 90)], fill='purple', **kw)
     self.layout(row=0, column=0)
     print(self.gettags(1))
@@ -49,7 +49,7 @@ def test_CanvasMeta():
 
 def test_GraphMeta():
     from tkinter import Tk
-    from tkinterx.graph.canvas import GraphMeta
+    from tkinterx.graph.drawing import GraphMeta
     root = Tk()
     root.geometry('750x650')
     self = GraphMeta(root, background='pink', width=600, height=600)
